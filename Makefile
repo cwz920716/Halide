@@ -291,6 +291,7 @@ SOURCE_FILES = \
   Closure.cpp \
   CodeGen_ARM.cpp \
   CodeGen_C.cpp \
+  CodeGen_Cuda.cpp \
   CodeGen_GPU_Dev.cpp \
   CodeGen_GPU_Host.cpp \
   CodeGen_Hexagon.cpp \
@@ -426,6 +427,7 @@ HEADER_FILES = \
   Closure.h \
   CodeGen_ARM.h \
   CodeGen_C.h \
+  CodeGen_Cuda.h \
   CodeGen_GPU_Dev.h \
   CodeGen_GPU_Host.h \
   CodeGen_LLVM.h \
