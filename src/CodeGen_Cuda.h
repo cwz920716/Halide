@@ -80,6 +80,56 @@ class CodeGen_Cuda : public IRPrinter {
   virtual void compile(const Buffer<> &buffer);
   // @}
 
+  void create_assertion(const std::string &id_cond, const std::string &id_msg);
+  void create_assertion(const std::string &id_cond, Expr message);
+  void create_assertion(Expr cond, Expr message);
+
+  using IRPrinter::visit;
+
+  void visit(const Variable *);
+  void visit(const IntImm *);
+  void visit(const UIntImm *);
+  void visit(const StringImm *);
+  void visit(const FloatImm *);
+  void visit(const Cast *);
+  void visit(const Add *);
+  void visit(const Sub *);
+  void visit(const Mul *);
+  void visit(const Div *);
+  void visit(const Mod *);
+  void visit(const Max *);
+  void visit(const Min *);
+  void visit(const EQ *);
+  void visit(const NE *);
+  void visit(const LT *);
+  void visit(const LE *);
+  void visit(const GT *);
+  void visit(const GE *);
+  void visit(const And *);
+  void visit(const Or *);
+  void visit(const Not *);
+  void visit(const Call *);
+  void visit(const Select *);
+  void visit(const Load *);
+  void visit(const Store *);
+  void visit(const Let *);
+  void visit(const LetStmt *);
+  void visit(const AssertStmt *);
+  void visit(const ProducerConsumer *);
+  void visit(const For *);
+  void visit(const Ramp *);
+  void visit(const Broadcast *);
+  void visit(const Provide *);
+  void visit(const Allocate *);
+  void visit(const Free *);
+  void visit(const Realize *);
+  void visit(const IfThenElse *);
+  void visit(const Evaluate *);
+  void visit(const Shuffle *);
+  void visit(const Prefetch *);
+
+  void visit_binop(Type t, Expr a, Expr b, const char *op);
+
  private:
 
   /** If the Type is a handle type, emit a forward-declaration for it
