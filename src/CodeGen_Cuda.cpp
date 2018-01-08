@@ -951,15 +951,15 @@ void CodeGen_Cuda::visit(const Broadcast *op) {
 }
 
 void CodeGen_Cuda::visit(const Provide *op) {
-  internal_error << "Cannot emit Provide statements as C\n";
+  internal_error << "Cannot emit Provide statements as Cuda\n";
 }
 
 void CodeGen_Cuda::visit(const Realize *op) {
-    internal_error << "Cannot emit realize statements to C\n";
+    internal_error << "Cannot emit realize statements to Cuda\n";
 }
 
 void CodeGen_Cuda::visit(const Prefetch *op) {
-    internal_error << "Cannot emit prefetch statements to C\n";
+    internal_error << "Cannot emit prefetch statements to Cuda\n";
 }
 
 void CodeGen_Cuda::visit(const IfThenElse *op) {
@@ -985,6 +985,274 @@ void CodeGen_Cuda::visit(const Evaluate *op) {
   string id = print_expr(op->value);
   do_indent();
   stream << "(void)" << id << ";\n";
+}
+
+void CodeGen_Cuda::visit(const Shuffle *op) {
+  internal_assert(op->vectors.size() >= 1);
+  internal_assert(op->vectors[0].type().is_vector());
+  for (size_t i = 1; i < op->vectors.size(); i++) {
+    internal_assert(op->vectors[0].type() == op->vectors[i].type());
+  }
+  internal_assert(op->type.lanes() == (int) op->indices.size());
+  const int max_index = (int) (op->vectors[0].type().lanes() * op->vectors.size());
+  for (int i : op->indices) {
+    internal_assert(i >= -1 && i < max_index);
+  }
+
+  std::vector<string> vecs;
+  for (Expr v : op->vectors) {
+    vecs.push_back(print_expr(v));
+  }
+  string src = vecs[0];
+  if (op->vectors.size() > 1) {
+    ostringstream rhs;
+    string storage_name = unique_name('_');
+    do_indent();
+    stream << "const " << print_type(op->vectors[0].type()) << " " << storage_name << "[] = { " << with_commas(vecs) << " };\n";
+
+    rhs << print_type(op->type) << "::concat(" << op->vectors.size() << ", " << storage_name << ")";
+    src = print_assignment(op->type, rhs.str());
+  }
+  ostringstream rhs;
+  if (op->type.is_scalar()) {
+    rhs << src << "[" << op->indices[0] << "]";
+  } else {
+    string indices_name = unique_name('_');
+    do_indent();
+    stream << "const int32_t " << indices_name << "[" << op->indices.size() << "] = { " << with_commas(op->indices) << " };\n";
+    rhs << print_type(op->type) << "::shuffle(" << src << ", " << indices_name << ")";
+  }
+  print_assignment(op->type, rhs.str());
+}
+
+void CodeGen_Cuda::visit(const Load *op) {
+  user_assert(is_one(op->predicate)) << "Predicated load is not supported by Cuda backend.\n";
+
+  // TODO: We could replicate the logic in the llvm codegen which decides whether
+  // the vector access can be aligned. Doing so would also require introducing
+  // aligned type equivalents for all the vector types.
+  ostringstream rhs;
+
+  Type t = op->type;
+  string name = print_name(op->name);
+
+  // If we're loading a contiguous ramp into a vector, just load the vector
+  Expr dense_ramp_base = strided_ramp_base(op->index, 1);
+  if (dense_ramp_base.defined()) {
+    internal_assert(t.is_vector());
+    string id_ramp_base = print_expr(dense_ramp_base);
+    rhs << print_type(t) + "::load(" << name << ", " << id_ramp_base << ")";
+  } else if (op->index.type().is_vector()) {
+    // If index is a vector, gather vector elements.
+    internal_assert(t.is_vector());
+    string id_index = print_expr(op->index);
+    rhs << print_type(t) + "::load(" << name << ", " << id_index << ")";
+  } else {
+    string id_index = print_expr(op->index);
+    bool type_cast_needed = !(allocations.contains(op->name) &&
+                            allocations.get(op->name).type.element_of() == t.element_of());
+    if (type_cast_needed) {
+      rhs << "((const " << print_type(t.element_of()) << " *)" << name << ")";
+    } else {
+      rhs << name;
+    }
+    rhs << "[" << id_index << "]";
+  }
+  print_assignment(t, rhs.str());
+}
+
+void CodeGen_Cuda::visit(const Store *op) {
+  user_assert(is_one(op->predicate)) << "Predicated store is not supported by Cuda backend.\n";
+
+  Type t = op->value.type();
+  string id_value = print_expr(op->value);
+  string name = print_name(op->name);
+
+  // TODO: We could replicate the logic in the llvm codegen which decides whether
+  // the vector access can be aligned. Doing so would also require introducing
+  // aligned type equivalents for all the vector types.
+
+  // If we're writing a contiguous ramp, just store the vector.
+  Expr dense_ramp_base = strided_ramp_base(op->index, 1);
+  if (dense_ramp_base.defined()) {
+    internal_assert(op->value.type().is_vector());
+    string id_ramp_base = print_expr(dense_ramp_base);
+    do_indent();
+    stream << id_value + ".store(" << name << ", " << id_ramp_base << ");\n";
+  } else if (op->index.type().is_vector()) {
+    // If index is a vector, scatter vector elements.
+    internal_assert(t.is_vector());
+    string id_index = print_expr(op->index);
+    do_indent();
+    stream << id_value + ".store(" << name << ", " << id_index << ");\n";
+  } else {
+    bool type_cast_needed =
+        t.is_handle() ||
+        !allocations.contains(op->name) ||
+        allocations.get(op->name).type != t;
+
+    string id_index = print_expr(op->index);
+    do_indent();
+    if (type_cast_needed) {
+        stream << "((" << print_type(t) << " *)" << name << ")";
+    } else {
+        stream << name;
+    }
+    stream << "[" << id_index << "] = " << id_value << ";\n";
+    }
+    cache.clear();
+}
+
+void CodeGen_Cuda::visit(const Allocate *op) {
+  open_scope();
+
+  string op_name = print_name(op->name);
+  string op_type = print_type(op->type, AppendSpace);
+
+  // For sizes less than 8k, do a stack allocation
+  bool on_stack = false;
+  int32_t constant_size;
+  string size_id;
+  if (op->new_expr.defined()) {
+    Allocation alloc;
+    alloc.type = op->type;
+    allocations.push(op->name, alloc);
+    heap_allocations.push(op->name);
+    stream << op_type << "*" << op_name << " = (" << print_expr(op->new_expr) << ");\n";
+  } else {
+    constant_size = op->constant_allocation_size();
+    if (constant_size > 0) {
+      int64_t stack_bytes = constant_size * op->type.bytes();
+
+      if (stack_bytes > ((int64_t(1) << 31) - 1)) {
+        user_error << "Total size for allocation "
+                   << op->name << " is constant but exceeds 2^31 - 1.\n";
+      } else {
+        size_id = print_expr(Expr(static_cast<int32_t>(constant_size)));
+        if (can_allocation_fit_on_stack(stack_bytes)) {
+          on_stack = true;
+        }
+      }
+    } else {
+      // Check that the allocation is not scalar (if it were scalar
+      // it would have constant size).
+      internal_assert(op->extents.size() > 0);
+
+      size_id = print_assignment(Int(64), print_expr(op->extents[0]));
+
+      for (size_t i = 1; i < op->extents.size(); i++) {
+        // Make the code a little less cluttered for two-dimensional case
+        string new_size_id_rhs;
+        string next_extent = print_expr(op->extents[i]);
+        if (i > 1) {
+          new_size_id_rhs =  "(" + size_id + " > ((int64_t(1) << 31) - 1)) ? " + size_id + " : (" + size_id + " * " + next_extent + ")";
+        } else {
+          new_size_id_rhs = size_id + " * " + next_extent;
+        }
+        size_id = print_assignment(Int(64), new_size_id_rhs);
+      }
+      do_indent();
+      stream << "if ((" << size_id << " > ((int64_t(1) << 31) - 1)) || ((" << size_id <<
+        " * sizeof(" << op_type << ")) > ((int64_t(1) << 31) - 1)))\n";
+      open_scope();
+      do_indent();
+      // TODO: call halide_error_buffer_allocation_too_large() here instead
+      // TODO: call create_assertion() so that NoAssertions works
+      stream << "halide_error(_ucon, "
+             << "\"32-bit signed overflow computing size of allocation " << op->name << "\\n\");\n";
+      do_indent();
+      stream << "return -1;\n";
+      close_scope("overflow test " + op->name);
+    }
+
+    // Check the condition to see if this allocation should actually be created.
+    // If the allocation is on the stack, the only condition we can respect is
+    // unconditional false (otherwise a non-constant-sized array declaration
+    // will be generated).
+    if (!on_stack || is_zero(op->condition)) {
+      Expr conditional_size = Select::make(op->condition,
+                                           Var(size_id),
+                                           Expr(static_cast<int32_t>(0)));
+      conditional_size = simplify(conditional_size);
+      size_id = print_assignment(Int(64), print_expr(conditional_size));
+    }
+
+    Allocation alloc;
+    alloc.type = op->type;
+    allocations.push(op->name, alloc);
+
+    do_indent();
+    stream << op_type;
+
+    if (on_stack) {
+      stream << op_name
+             << "[" << size_id << "];\n";
+    } else {
+      stream << "*"
+             << op_name
+             << " = ("
+             << op_type
+             << " *)halide_malloc(_ucon, sizeof("
+             << op_type
+             << ")*" << size_id << ");\n";
+      heap_allocations.push(op->name);
+    }
+  }
+
+  if (!on_stack) {
+    create_assertion(op_name, "halide_error_out_of_memory(_ucon)");
+
+    do_indent();
+    string free_function = op->free_function.empty() ? "halide_free" : op->free_function;
+    stream << "HalideFreeHelper " << op_name << "_free(_ucon, "
+           << op_name << ", " << free_function << ");\n";
+  }
+
+  op->body.accept(this);
+
+  // Should have been freed internally
+  internal_assert(!allocations.contains(op->name));
+
+  close_scope("alloc " + print_name(op->name));
+}
+
+void CodeGen_Cuda::visit(const Free *op) {
+  if (heap_allocations.contains(op->name)) {
+    do_indent();
+    stream << print_name(op->name) << "_free.free();\n";
+    heap_allocations.pop(op->name);
+  }
+  allocations.pop(op->name);
+}
+
+void CodeGen_Cuda::visit(const For *op) {
+  string id_min = print_expr(op->min);
+  string id_extent = print_expr(op->extent);
+
+  if (op->for_type == ForType::Parallel) {
+    do_indent();
+    stream << "#pragma omp parallel for\n";
+  } else {
+    internal_assert(op->for_type == ForType::Serial)
+        << "Can only emit serial or parallel for loops to C\n";
+  }
+
+  do_indent();
+  stream << "for (int "
+         << print_name(op->name)
+         << " = " << id_min
+         << "; "
+         << print_name(op->name)
+         << " < " << id_min
+         << " + " << id_extent
+         << "; "
+         << print_name(op->name)
+         << "++)\n";
+
+  open_scope();
+  op->body.accept(this);
+  close_scope("for " + print_name(op->name));
+
 }
 
 

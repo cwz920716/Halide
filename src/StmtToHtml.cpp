@@ -22,6 +22,109 @@ std::string to_string(T value) {
     return os.str() ;
 }
 
+string type_to_c_type(Type type, bool include_space, bool c_plus_plus = true) {
+    bool needs_space = true;
+    std::ostringstream oss;
+
+    if (type.is_float()) {
+        if (type.bits() == 32) {
+            oss << "float";
+        } else if (type.bits() == 64) {
+            oss << "double";
+        } else {
+            user_error << "Can't represent a float with this many bits in C: " << type << "\n";
+        }
+        if (type.is_vector()) {
+            oss << type.lanes();
+        }
+    } else if (type.is_handle()) {
+        needs_space = false;
+
+        // If there is no type info or is generating C (not C++) and
+        // the type is a class or in an inner scope, just use void *.
+        if (type.handle_type == NULL ||
+            (!c_plus_plus &&
+             (!type.handle_type->namespaces.empty() ||
+              !type.handle_type->enclosing_types.empty() ||
+              type.handle_type->inner_name.cpp_type_type == halide_cplusplus_type_name::Class))) {
+            oss << "void *";
+        } else {
+            if (type.handle_type->inner_name.cpp_type_type ==
+                halide_cplusplus_type_name::Struct) {
+                oss << "struct ";
+            }
+
+            if (!type.handle_type->namespaces.empty() ||
+                !type.handle_type->enclosing_types.empty()) {
+                oss << "::";
+                for (size_t i = 0; i < type.handle_type->namespaces.size(); i++) {
+                    oss << type.handle_type->namespaces[i] << "::";
+                }
+                for (size_t i = 0; i < type.handle_type->enclosing_types.size(); i++) {
+                    oss << type.handle_type->enclosing_types[i].name << "::";
+                }
+            }
+            oss << type.handle_type->inner_name.name;
+            if (type.handle_type->reference_type == halide_handle_cplusplus_type::LValueReference) {
+                oss << " &";
+            } else if (type.handle_type->reference_type == halide_handle_cplusplus_type::LValueReference) {
+                oss << " &&";
+            }
+            for (auto modifier : type.handle_type->cpp_type_modifiers) {
+                if (modifier & halide_handle_cplusplus_type::Const) {
+                    oss << " const";
+                }
+                if (modifier & halide_handle_cplusplus_type::Volatile) {
+                    oss << " volatile";
+                }
+                if (modifier & halide_handle_cplusplus_type::Restrict) {
+                    oss << " restrict";
+                }
+                if (modifier & halide_handle_cplusplus_type::Pointer) {
+                    oss << " *";
+                }
+            }
+        }
+    } else {
+        // This ends up using different type names than OpenCL does
+        // for the integer vector types. E.g. uint16x8_t rather than
+        // OpenCL's short8. Should be fine as CodeGen_C introduces
+        // typedefs for them and codegen always goes through this
+        // routine or its override in CodeGen_OpenCL to make the
+        // names. This may be the better bet as the typedefs are less
+        // likely to collide with built-in types (e.g. the OpenCL
+        // ones for a C compiler that decides to compile OpenCL).
+        // This code also supports arbitrary vector sizes where the
+        // OpenCL ones must be one of 2, 3, 4, 8, 16, which is too
+        // restrictive for already existing architectures.
+        switch (type.bits()) {
+        case 1:
+            // bool vectors are always emitted as uint8 in the C++ backend
+            if (type.is_vector()) {
+                oss << "uint8x" << type.lanes() << "_t";
+            } else {
+                oss << "bool";
+            }
+            break;
+        case 8: case 16: case 32: case 64:
+            if (type.is_uint()) {
+                oss << 'u';
+            }
+            oss << "int" << type.bits();
+            if (type.is_vector()) {
+                oss << "x" << type.lanes();
+            }
+            oss << "_t";
+            break;
+        default:
+            user_error << "Can't represent an integer with this many bits in C: " << type << "\n";
+        }
+    }
+    if (include_space && needs_space)
+        oss << " ";
+    return oss.str();
+}
+
 class StmtToHtml : public IRVisitor {
 
     static const std::string css, js;
@@ -282,8 +385,15 @@ private:
         stream << close_span();
     }
     void visit(const Call *op) {
+        std::string type = "XXX";
+        if (op->is_intrinsic(Call::reinterpret) ||
+            op->is_intrinsic(Call::make_struct)) {
+            // For calls that define a type that isn't just a function of
+            // the types of the args, we also print the type.
+            type = string("&lt;") + type_to_c_type(op->type, false) + "&gt;";
+        }
         stream << open_span("Call");
-        print_list(symbol(op->name) + "(", op->args, ")");
+        print_list(symbol(op->name) + type + "(", op->args, ")");
         stream << close_span();
     }
 

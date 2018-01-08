@@ -172,6 +172,16 @@ class CodeGen_Cuda : public IRPrinter {
 
   /** A cache of generated values in scope */
   std::map<std::string, std::string> cache;
+
+  struct Allocation {
+    Type type;
+  };
+
+  /** Track the types of allocations to avoid unnecessary casts. */
+  Scope<Allocation> allocations;
+
+  /** Track which allocations actually went on the heap. */
+  Scope<> heap_allocations;
 };
 
 }  // namespace Internal
