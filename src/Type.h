@@ -5,6 +5,7 @@
 #include "runtime/HalideRuntime.h"
 #include "Error.h"
 #include "Util.h"
+#include "Fix16.h"
 #include "Float16.h"
 
 /** \file
@@ -293,6 +294,7 @@ struct Type {
     static const halide_type_code_t Int = halide_type_int;
     static const halide_type_code_t UInt = halide_type_uint;
     static const halide_type_code_t Float = halide_type_float;
+    static const halide_type_code_t Fix16 = halide_type_fix16;
     static const halide_type_code_t Handle = halide_type_handle;
     // @}
 
@@ -367,6 +369,9 @@ struct Type {
 
     /** Is this type a floating point type (float or double). */
     bool is_float() const {return code() == Float;}
+
+    /** Is this type a fixed point 16.16 type. */
+    bool is_fix16() const {return code() == Fix16;}
 
     /** Is this type a signed integer type? */
     bool is_int() const {return code() == Int;}

@@ -25,6 +25,9 @@ ostream &operator<<(ostream &out, const Type &type) {
     case Type::Float:
         out << "float";
         break;
+    case Type::Fix16:
+        out << "fix16";
+        break;
     case Type::Handle:
         if (type.handle_type) {
             out << "(" << type.handle_type->inner_name.name << " *)";

@@ -110,6 +110,10 @@ bool Type::can_represent(Type other) const {
         return ((other.is_float() && other.bits() <= bits()) ||
                 (bits() == 64 && other.bits() <= 32) ||
                 (bits() == 32 && other.bits() <= 16));
+    } else if (is_fix16()) {
+        return (other.is_fix16() ||
+                (other.is_int() && other.bits() <= 16) ||
+                (other.is_uint() && other.bits() < 16));
     } else {
         return false;
     }
@@ -164,6 +168,8 @@ bool Type::can_represent(double x) const {
     } else if (is_uint()) {
         uint64_t u = x;
         return (x >= 0) && (x <= max_uint(bits())) && (x == (double)u);
+    } else if (is_fix16()) {
+        return (double) (Fix16_t)x == x;
     } else if (is_float()) {
         switch (bits()) {
         case 16:
