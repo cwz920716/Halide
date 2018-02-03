@@ -36,7 +36,9 @@ ostream &operator<<(ostream &out, const Type &type) {
         }
         break;
     }
-    if (!type.is_handle()) {
+    if (type.is_fix16()) {
+        out << "." << (type.bits() - 16);
+    } else if (!type.is_handle()) {
         out << type.bits();
     }
     if (type.lanes() > 1) out << 'x' << type.lanes();
@@ -314,6 +316,10 @@ void IRPrinter::visit(const FloatImm *op) {
     default:
         internal_error << "Bad bit-width for float: " << op->type << "\n";
     }
+}
+
+void IRPrinter::visit(const Fix16Imm *op) {
+    stream << "fix16.16(" << float(op->value) << ")";
 }
 
 void IRPrinter::visit(const StringImm *op) {

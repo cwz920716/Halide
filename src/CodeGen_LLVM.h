@@ -309,6 +309,7 @@ protected:
     virtual void visit(const IntImm *);
     virtual void visit(const UIntImm *);
     virtual void visit(const FloatImm *);
+    virtual void visit(const Fix16Imm *);
     virtual void visit(const StringImm *);
     virtual void visit(const Cast *);
     virtual void visit(const Variable *);

@@ -31,6 +31,9 @@ Halide::Expr Type::max() const {
         return Internal::IntImm::make(*this, max_int(bits()));
     } else if (is_uint()) {
         return Internal::UIntImm::make(*this, max_uint(bits()));
+    } else if (is_fix16()) {
+        return Internal::Fix16Imm::make(*this,
+                                        Fix16_t::make_from_bits(fix16_maximum));
     } else {
         internal_assert(is_float());
         if (bits() == 16) {
@@ -55,6 +58,9 @@ Halide::Expr Type::min() const {
         return Internal::IntImm::make(*this, min_int(bits()));
     } else if (is_uint()) {
         return Internal::UIntImm::make(*this, 0);
+    } else if (is_fix16()) {
+        return Internal::Fix16Imm::make(*this,
+                                        Fix16_t::make_from_bits(fix16_minimum));
     } else {
         internal_assert(is_float());
         if (bits() == 16) {
@@ -111,9 +117,7 @@ bool Type::can_represent(Type other) const {
                 (bits() == 64 && other.bits() <= 32) ||
                 (bits() == 32 && other.bits() <= 16));
     } else if (is_fix16()) {
-        return (other.is_fix16() ||
-                (other.is_int() && other.bits() <= 16) ||
-                (other.is_uint() && other.bits() < 16));
+        return true;
     } else {
         return false;
     }
@@ -135,6 +139,8 @@ bool Type::can_represent(int64_t x) const {
         default:
             return false;
         }
+    } else if (is_fix16()) {
+        return true;
     } else {
         return false;
     }
@@ -156,6 +162,8 @@ bool Type::can_represent(uint64_t x) const {
         default:
             return false;
         }
+    } else if (is_fix16()) {
+        return true;
     } else {
         return false;
     }
@@ -181,6 +189,8 @@ bool Type::can_represent(double x) const {
         default:
             return false;
         }
+    } else if (is_fix16()) {
+        return true;
     } else {
         return false;
     }

@@ -453,6 +453,11 @@ inline Type Float(int bits, int lanes = 1) {
     return Type(Type::Float, bits, lanes);
 }
 
+/** Construct a fixed-point 16.16 type */
+inline Type Fix16(int lanes = 1) {
+    return Type(Type::Fix16, 32, lanes);
+}
+
 /** Construct a boolean type */
 inline Type Bool(int lanes = 1) {
     return UInt(1, lanes);

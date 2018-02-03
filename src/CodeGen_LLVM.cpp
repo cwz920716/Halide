@@ -1127,6 +1127,11 @@ void CodeGen_LLVM::visit(const FloatImm *op) {
     value = ConstantFP::get(llvm_type_of(op->type), op->value);
 }
 
+// TODO(wcui): place holder for fix16.16
+void CodeGen_LLVM::visit(const Fix16Imm *op) {
+    value = ConstantInt::getSigned(llvm_type_of(op->type), op->value.to_bits());
+}
+
 void CodeGen_LLVM::visit(const StringImm *op) {
     value = create_string_constant(op->value);
 }

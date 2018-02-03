@@ -27,6 +27,10 @@ class MonotonicVisitor : public IRVisitor {
         result = Monotonic::Constant;
     }
 
+    void visit(const Fix16Imm *) {
+        result = Monotonic::Constant;
+    }
+
     void visit(const StringImm *) {
         internal_error << "Monotonic on String\n";
     }

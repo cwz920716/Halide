@@ -11,6 +11,7 @@
 #include "Debug.h"
 #include "Error.h"
 #include "Float16.h"
+#include "Fix16.h"
 #include "Type.h"
 #include "IntrusivePtr.h"
 #include "Util.h"
@@ -26,6 +27,7 @@ enum class IRNodeType {
     IntImm,
     UIntImm,
     FloatImm,
+    Fix16Imm,
     StringImm,
     Cast,
     Variable,
@@ -252,6 +254,23 @@ struct FloatImm : public ExprNode<FloatImm> {
     }
 
     static const IRNodeType _node_type = IRNodeType::FloatImm;
+};
+
+/** Fixed point 16.16 constants */
+struct Fix16Imm : public ExprNode<Fix16Imm> {
+    Fix16_t value;
+
+    static const Fix16Imm *make(Type t, Fix16_t value) {
+        internal_assert(t.is_fix16() && t.is_scalar())
+            << "Fix16Imm must be a scalar Fix16\n";
+        Fix16Imm *node = new Fix16Imm;
+        node->type = t;
+        node->value = value;
+
+        return node;
+    }
+
+    static const IRNodeType _node_type = IRNodeType::Fix16Imm;
 };
 
 /** String constants */
