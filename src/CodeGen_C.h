@@ -165,6 +165,7 @@ protected:
     void visit(const UIntImm *);
     void visit(const StringImm *);
     void visit(const FloatImm *);
+    void visit(const Fix16Imm *);
     void visit(const Cast *);
     void visit(const Add *);
     void visit(const Sub *);

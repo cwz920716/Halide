@@ -316,6 +316,8 @@ string type_to_c_type(Type type, bool include_space, bool c_plus_plus = true) {
         if (type.is_vector()) {
             oss << type.lanes();
         }
+    } else if (type.is_fix16()) {
+        oss << "fix16_t";
     } else if (type.is_handle()) {
         needs_space = false;
 
@@ -1744,20 +1746,42 @@ void CodeGen_C::visit_binop(Type t, Expr a, Expr b, const char * op) {
 }
 
 void CodeGen_C::visit(const Add *op) {
-    visit_binop(op->type, op->a, op->b, "+");
+    if (op->type.is_fix16()) {
+        string sa = print_expr(op->a);
+        string sb = print_expr(op->b);
+        print_assignment(op->type, "fix16_add(" + sa + ", " + sb + ")");
+    } else {
+        visit_binop(op->type, op->a, op->b, "+");
+    }
 }
 
 void CodeGen_C::visit(const Sub *op) {
-    visit_binop(op->type, op->a, op->b, "-");
+    if (op->type.is_fix16()) {
+        string sa = print_expr(op->a);
+        string sb = print_expr(op->b);
+        print_assignment(op->type, "fix16_sub(" + sa + ", " + sb + ")");
+    } else {
+        visit_binop(op->type, op->a, op->b, "-");
+    }
 }
 
 void CodeGen_C::visit(const Mul *op) {
-    visit_binop(op->type, op->a, op->b, "*");
+    if (op->type.is_fix16()) {
+        string sa = print_expr(op->a);
+        string sb = print_expr(op->b);
+        print_assignment(op->type, "fix16_mul(" + sa + ", " + sb + ")");
+    } else {
+        visit_binop(op->type, op->a, op->b, "*");
+    }
 }
 
 void CodeGen_C::visit(const Div *op) {
     int bits;
-    if (is_const_power_of_two_integer(op->b, &bits)) {
+    if (op->type.is_fix16()) {
+        string sa = print_expr(op->a);
+        string sb = print_expr(op->b);
+        print_assignment(op->type, "fix16_div(" + sa + ", " + sb + ")");
+    } else if (is_const_power_of_two_integer(op->b, &bits)) {
         visit_binop(op->type, op->a, make_const(op->a.type(), bits), ">>");
     } else if (op->type.is_int()) {
         print_expr(lower_euclidean_div(op->a, op->b));
@@ -1847,6 +1871,10 @@ void CodeGen_C::visit(const IntImm *op) {
 
 void CodeGen_C::visit(const UIntImm *op) {
     print_assignment(op->type, "(" + print_type(op->type) + ")(" + std::to_string(op->value) + ")");
+}
+
+void CodeGen_C::visit(const Fix16Imm *op) {
+    print_assignment(op->type, "(" + print_type(op->type) + ")(" + std::to_string((float) op->value) + ")");
 }
 
 void CodeGen_C::visit(const StringImm *op) {
