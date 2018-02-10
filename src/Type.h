@@ -385,9 +385,16 @@ struct Type {
     /** Check that the type name of two handles matches. */
     EXPORT bool same_handle_type(const Type &other) const;
 
+    /** Check that one of them is int and fixed point. */
+    EXPORT bool compatible_type_codes(const Type &other) const {
+        // return (is_fix16() && other.is_int()) || (is_int() && other.is_fix16());
+        return false;
+    }
+
     /** Compare two types for equality */
     bool operator==(const Type &other) const {
-        return code() == other.code() && bits() == other.bits() && lanes() == other.lanes() &&
+        return (code() == other.code() || compatible_type_codes(other))
+                 && bits() == other.bits() && lanes() == other.lanes() &&
             (code() != Handle || same_handle_type(other));
     }
 

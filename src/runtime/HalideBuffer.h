@@ -14,6 +14,7 @@
 #include <limits>
 #include <stdint.h>
 #include <string.h>
+#include <iostream>
 
 #include "HalideRuntime.h"
 
@@ -522,6 +523,13 @@ public:
                       T_is_void || Buffer<T2, D2>::T_is_void,
                       "type mismatch constructing Buffer");
         if (Buffer<T2, D2>::T_is_void && !T_is_void) {
+            auto t1c = static_halide_type().code;
+            auto t2c = other.type().code;
+            std::cout << "T=" << t1c << "\n";
+            std::cout << "T2=" << t2c << "\n";
+            if (t1c == halide_type_int && t2c == halide_type_fix16) {
+                return true;
+            }
             return other.type() == static_halide_type();
         }
         return true;

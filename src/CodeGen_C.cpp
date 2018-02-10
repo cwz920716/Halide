@@ -1852,6 +1852,8 @@ string CodeGen_C::print_cast_expr(const Type &t, Expr e) {
         t != e.type()) {
         return print_assignment(t, type + "::convert_from<" + print_type(e.type()) + ">(" + value + ")");
     } else {
+        if () {
+        }
         return print_assignment(t, "(" + type + ")(" + value + ")");
     }
 }
