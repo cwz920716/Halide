@@ -317,7 +317,7 @@ void IRPrinter::visit(const FloatImm *op) {
 }
 
 void IRPrinter::visit(const Fix16Imm *op) {
-    stream << "fix16_t(" << float(op->value) << ")";
+    stream << "fix16_from_float(" << float(op->value) << ")";
 }
 
 void IRPrinter::visit(const StringImm *op) {
@@ -354,7 +354,11 @@ void IRPrinter::visit(const StringImm *op) {
 }
 
 void IRPrinter::visit(const Cast *op) {
-    stream << op->type << '(';
+    if (op->type.is_fix16()) {
+        stream << "fix16_from_float(";
+    } else {
+        stream << op->type << '(';
+    }
     print(op->value);
     stream << ')';
 }

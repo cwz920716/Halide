@@ -317,6 +317,29 @@ struct halide_type_t {
 #endif
 };
 
+typedef int32_t fix16_t;
+
+const fix16_t FOUR_DIV_PI  = 0x145F3;            /*!< Fix16 value of 4/PI */
+const fix16_t _FOUR_DIV_PI2 = 0xFFFF9840;        /*!< Fix16 value of -4/PI² */
+const fix16_t X4_CORRECTION_COMPONENT = 0x399A; 	/*!< Fix16 value of 0.225 */
+const fix16_t PI_DIV_4 = 0x0000C90F;             /*!< Fix16 value of PI/4 */
+const fix16_t THREE_PI_DIV_4 = 0x00025B2F;       /*!< Fix16 value of 3PI/4 */
+
+const fix16_t fix16_maximum  = 0x7FFFFFFF; /*!< the maximum value of fix16_t */
+const fix16_t fix16_minimum  = 0x80000000; /*!< the minimum value of fix16_t */
+const fix16_t fix16_overflow = 0x80000000; /*!< the value used to indicate overflows when FIXMATH_NO_OVERFLOW is not specified */
+
+const fix16_t fix16_pi  = 205887;     /*!< fix16_t value of pi */
+const fix16_t fix16_e   = 178145;     /*!< fix16_t value of e */
+const fix16_t fix16_one = 0x00010000; /*!< fix16_t value of 1 */
+
+extern float halide_fix16_to_float(fix16_t a);
+extern fix16_t halide_fix16_from_float(float a);
+extern fix16_t halide_fix16_add(fix16_t a, fix16_t b);
+extern fix16_t halide_fix16_sub(fix16_t a, fix16_t b);
+extern fix16_t halide_fix16_mul(fix16_t a, fix16_t b);
+extern fix16_t halide_fix16_div(fix16_t a, fix16_t b);
+
 enum halide_trace_event_code_t {halide_trace_load = 0,
                                 halide_trace_store = 1,
                                 halide_trace_begin_realization = 2,

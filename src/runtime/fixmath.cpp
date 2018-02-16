@@ -1,29 +1,10 @@
-#ifndef RUNTIME_FIXMATH_H
-#define RUNTIME_FIXMATH_H
-
 #include "HalideRuntime.h"
 
-typedef int32_t fix16_t;
-
-const fix16_t FOUR_DIV_PI  = 0x145F3;            /*!< Fix16 value of 4/PI */
-const fix16_t _FOUR_DIV_PI2 = 0xFFFF9840;        /*!< Fix16 value of -4/PI² */
-const fix16_t X4_CORRECTION_COMPONENT = 0x399A; 	/*!< Fix16 value of 0.225 */
-const fix16_t PI_DIV_4 = 0x0000C90F;             /*!< Fix16 value of PI/4 */
-const fix16_t THREE_PI_DIV_4 = 0x00025B2F;       /*!< Fix16 value of 3PI/4 */
-
-const fix16_t fix16_maximum  = 0x7FFFFFFF; /*!< the maximum value of fix16_t */
-const fix16_t fix16_minimum  = 0x80000000; /*!< the minimum value of fix16_t */
-const fix16_t fix16_overflow = 0x80000000; /*!< the value used to indicate overflows when FIXMATH_NO_OVERFLOW is not specified */
-
-const fix16_t fix16_pi  = 205887;     /*!< fix16_t value of pi */
-const fix16_t fix16_e   = 178145;     /*!< fix16_t value of e */
-const fix16_t fix16_one = 0x00010000; /*!< fix16_t value of 1 */
-
-HALIDE_ALWAYS_INLINE float fix16_to_float(fix16_t a) {
+WEAK extern "C" float halide_fix16_to_float(fix16_t a) {
   return (float)a / fix16_one;
 }
 
-HALIDE_ALWAYS_INLINE fix16_t fix16_from_float(float a) {
+WEAK extern "C" fix16_t halide_fix16_from_float(float a) {
   float temp = a * fix16_one;
 #ifndef FIXMATH_NO_ROUNDING
   temp += (temp >= 0) ? 0.5f : -0.5f;
@@ -31,7 +12,7 @@ HALIDE_ALWAYS_INLINE fix16_t fix16_from_float(float a) {
   return (fix16_t)temp;
 }
 
-HALIDE_ALWAYS_INLINE fix16_t fix16_add(fix16_t a, fix16_t b) {
+WEAK extern "C" fix16_t halide_fix16_add(fix16_t a, fix16_t b) {
   // Use unsigned integers because overflow with signed integers is
   // an undefined operation (http://www.airs.com/blog/archives/120).
   uint32_t _a = a, _b = b;
@@ -45,7 +26,7 @@ HALIDE_ALWAYS_INLINE fix16_t fix16_add(fix16_t a, fix16_t b) {
   return sum;
 }
 
-HALIDE_ALWAYS_INLINE fix16_t fix16_sub(fix16_t a, fix16_t b) {
+WEAK extern "C" fix16_t halide_fix16_sub(fix16_t a, fix16_t b) {
   uint32_t _a = a, _b = b;
   uint32_t diff = _a - _b;
 
@@ -57,7 +38,7 @@ HALIDE_ALWAYS_INLINE fix16_t fix16_sub(fix16_t a, fix16_t b) {
   return diff;
 }
 
-HALIDE_ALWAYS_INLINE fix16_t fix16_mul(fix16_t inArg0, fix16_t inArg1) {
+WEAK extern "C" fix16_t halide_fix16_mul(fix16_t inArg0, fix16_t inArg1) {
   int64_t product = (int64_t)inArg0 * inArg1;
 
   #ifndef FIXMATH_NO_OVERFLOW
@@ -91,7 +72,7 @@ HALIDE_ALWAYS_INLINE fix16_t fix16_mul(fix16_t inArg0, fix16_t inArg1) {
   #endif  // FIXMATH_NO_ROUNDING
 }
 
-HALIDE_ALWAYS_INLINE fix16_t fix16_div(fix16_t a, fix16_t b) {
+WEAK extern "C" fix16_t halide_fix16_div(fix16_t a, fix16_t b) {
   // This uses a hardware 32/32 bit division multiple times, until we have
   // computed all the bits in (a<<17)/b. Usually this takes 1-3 iterations.
 
@@ -157,5 +138,3 @@ HALIDE_ALWAYS_INLINE fix16_t fix16_div(fix16_t a, fix16_t b) {
 
   return result;
 }
-
-#endif  // RUNTIME_FIXMATH_H

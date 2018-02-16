@@ -2,6 +2,7 @@
 #define HALIDE_TYPE_H
 
 #include <stdint.h>
+#include <cassert>
 #include "runtime/HalideRuntime.h"
 #include "Error.h"
 #include "Util.h"
@@ -462,6 +463,8 @@ inline Type Float(int bits, int lanes = 1) {
 
 /** Construct a fixed-point 16.16 type */
 inline Type Fix16(int lanes = 1) {
+    // TODO(wcui): support vector in the future.
+    assert(lanes <= 1);
     return Type(Type::Fix16, 32, lanes);
 }
 
