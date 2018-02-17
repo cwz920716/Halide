@@ -1228,6 +1228,13 @@ void CodeGen_LLVM::visit(const Variable *op) {
 void CodeGen_LLVM::visit(const Add *op) {
     if (op->type.is_float()) {
         value = builder->CreateFAdd(codegen(op->a), codegen(op->b));
+    } else if (op->type.is_fix16()) {
+        llvm::Function *fix16_add = module->getFunction("halide_fix16_add");
+        internal_assert(fix16_add) << "Could not find halide_fix16_add function in initial module\n";
+        Value *arg1 = codegen(op->a);
+        Value *arg2 = codegen(op->b);
+        Value *args[] = {arg1, arg2};
+        value = builder->CreateCall(fix16_add, args);
     } else if (op->type.is_int() && op->type.bits() >= 32) {
         // We tell llvm integers don't wrap, so that it generates good
         // code for loop indices.
@@ -1240,6 +1247,13 @@ void CodeGen_LLVM::visit(const Add *op) {
 void CodeGen_LLVM::visit(const Sub *op) {
     if (op->type.is_float()) {
         value = builder->CreateFSub(codegen(op->a), codegen(op->b));
+    } else if (op->type.is_fix16()) {
+        llvm::Function *fix16_sub = module->getFunction("halide_fix16_sub");
+        internal_assert(fix16_sub) << "Could not find halide_fix16_sub function in initial module\n";
+        Value *arg1 = codegen(op->a);
+        Value *arg2 = codegen(op->b);
+        Value *args[] = {arg1, arg2};
+        value = builder->CreateCall(fix16_sub, args);
     } else if (op->type.is_int() && op->type.bits() >= 32) {
         // We tell llvm integers don't wrap, so that it generates good
         // code for loop indices.
@@ -1252,6 +1266,13 @@ void CodeGen_LLVM::visit(const Sub *op) {
 void CodeGen_LLVM::visit(const Mul *op) {
     if (op->type.is_float()) {
         value = builder->CreateFMul(codegen(op->a), codegen(op->b));
+    } else if (op->type.is_fix16()) {
+        llvm::Function *fix16_mul = module->getFunction("halide_fix16_mul");
+        internal_assert(fix16_mul) << "Could not find halide_fix16_mul function in initial module\n";
+        Value *arg1 = codegen(op->a);
+        Value *arg2 = codegen(op->b);
+        Value *args[] = {arg1, arg2};
+        value = builder->CreateCall(fix16_mul, args);
     } else if (op->type.is_int() && op->type.bits() >= 32) {
         // We tell llvm integers don't wrap, so that it generates good
         // code for loop indices.
@@ -1285,6 +1306,13 @@ void CodeGen_LLVM::visit(const Div *op) {
     int shift_amount;
     if (op->type.is_float()) {
         value = builder->CreateFDiv(codegen(op->a), codegen(op->b));
+    } else if (op->type.is_fix16()) {
+        llvm::Function *fix16_div = module->getFunction("halide_fix16_div");
+        internal_assert(fix16_div) << "Could not find halide_fix16_div function in initial module\n";
+        Value *arg1 = codegen(op->a);
+        Value *arg2 = codegen(op->b);
+        Value *args[] = {arg1, arg2};
+        value = builder->CreateCall(fix16_div, args);
     } else if (is_const_power_of_two_integer(op->b, &shift_amount) &&
                (op->type.is_int() || op->type.is_uint())) {
         value = codegen(op->a >> shift_amount);
