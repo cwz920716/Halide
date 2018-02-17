@@ -737,6 +737,7 @@ bool Shuffle::is_extract_element() const {
 template<> EXPORT void ExprNode<IntImm>::accept(IRVisitor *v) const { v->visit((const IntImm *)this); }
 template<> EXPORT void ExprNode<UIntImm>::accept(IRVisitor *v) const { v->visit((const UIntImm *)this); }
 template<> EXPORT void ExprNode<FloatImm>::accept(IRVisitor *v) const { v->visit((const FloatImm *)this); }
+template<> EXPORT void ExprNode<Fix16Imm>::accept(IRVisitor *v) const { v->visit((const Fix16Imm *)this); }
 template<> EXPORT void ExprNode<StringImm>::accept(IRVisitor *v) const { v->visit((const StringImm *)this); }
 template<> EXPORT void ExprNode<Cast>::accept(IRVisitor *v) const { v->visit((const Cast *)this); }
 template<> EXPORT void ExprNode<Variable>::accept(IRVisitor *v) const { v->visit((const Variable *)this); }
@@ -780,6 +781,7 @@ template<> EXPORT void StmtNode<Prefetch>::accept(IRVisitor *v) const { v->visit
 template<> EXPORT Expr ExprNode<IntImm>::mutate_expr(IRMutator2 *v) const { return v->visit((const IntImm *)this); }
 template<> EXPORT Expr ExprNode<UIntImm>::mutate_expr(IRMutator2 *v) const { return v->visit((const UIntImm *)this); }
 template<> EXPORT Expr ExprNode<FloatImm>::mutate_expr(IRMutator2 *v) const { return v->visit((const FloatImm *)this); }
+template<> EXPORT Expr ExprNode<Fix16Imm>::mutate_expr(IRMutator2 *v) const { return v->visit((const Fix16Imm *)this); }
 template<> EXPORT Expr ExprNode<StringImm>::mutate_expr(IRMutator2 *v) const { return v->visit((const StringImm *)this); }
 template<> EXPORT Expr ExprNode<Cast>::mutate_expr(IRMutator2 *v) const { return v->visit((const Cast *)this); }
 template<> EXPORT Expr ExprNode<Variable>::mutate_expr(IRMutator2 *v) const { return v->visit((const Variable *)this); }

@@ -155,6 +155,12 @@ private:
         stream << close_span();
     }
 
+    void visit(const Fix16Imm *op){
+        stream << open_span("Fix16Imm Imm");
+        stream << Expr(op);
+        stream << close_span();
+    }
+
     void visit(const StringImm *op){
         stream << open_span("StringImm");
         stream << '"';

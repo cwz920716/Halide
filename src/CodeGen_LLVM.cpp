@@ -1127,6 +1127,17 @@ void CodeGen_LLVM::visit(const FloatImm *op) {
     value = ConstantFP::get(llvm_type_of(op->type), op->value);
 }
 
+// TODO(wcui): place holder for fix16.16
+void CodeGen_LLVM::visit(const Fix16Imm *op) {
+    llvm::Function *fix16_from_float = module->getFunction("halide_fix16_from_float");
+    internal_assert(fix16_from_float) << "Could not find halide_fix16_from_float function in initial module\n";
+
+    Type fp32 = Float(32);
+    Value *imm = ConstantFP::get(llvm_type_of(fp32), float(op->value));
+    Value *args[] = {imm};
+    value = builder->CreateCall(fix16_from_float, args);
+}
+
 void CodeGen_LLVM::visit(const StringImm *op) {
     value = create_string_constant(op->value);
 }
@@ -1139,10 +1150,46 @@ void CodeGen_LLVM::visit(const Cast *op) {
 
     llvm::Type *llvm_dst = llvm_type_of(dst);
 
+    // std::cout << "cast from " << src << " to " << dst << "\n";
     if (dst.is_handle() && src.is_handle()) {
         value = builder->CreateBitCast(value, llvm_dst);
     } else if (dst.is_handle() || src.is_handle()) {
         internal_error << "Can't cast from " << src << " to " << dst << "\n";
+    } else if (src.is_fix16() && !dst.is_fix16()) {
+        llvm::Function *fix16_to_float = module->getFunction("halide_fix16_to_float");
+        internal_assert(fix16_to_float) << "Could not find halide_fix16_to_float function in initial module\n";
+        Value *args[] = {value};
+        Value *fp_value = builder->CreateCall(fix16_to_float, args);
+        if (dst.is_int()) {
+            value = builder->CreateFPToSI(fp_value, llvm_dst);
+        } else if (dst.is_uint()) {
+            if (dst.bits() < 8) {
+                value = builder->CreateFPToUI(fp_value, llvm_type_of(dst.with_bits(8)));
+                value = builder->CreateIntCast(fp_value, llvm_dst, false);
+            } else {
+                value = builder->CreateFPToUI(fp_value, llvm_dst);
+            }
+        } else {
+            internal_assert(dst.is_float());
+            value = builder->CreateFPCast(fp_value, llvm_dst);
+        }
+    } else if (!src.is_fix16() && dst.is_fix16()) {
+        Type fp32 = Float(32);
+        llvm::Type *fp_type = llvm_type_of(fp32);
+        Value *fp_value = nullptr;
+        if (src.is_int()) {
+            fp_value = builder->CreateSIToFP(value, fp_type);
+        } else if (src.is_uint()) {
+            fp_value = builder->CreateUIToFP(value, fp_type);
+        } else {
+            internal_assert(src.is_float());
+            // Float widening or narrowing
+            fp_value = builder->CreateFPCast(value, fp_type);
+        }
+        llvm::Function *fix16_from_float = module->getFunction("halide_fix16_from_float");
+        internal_assert(fix16_from_float) << "Could not find halide_fix16_from_float function in initial module\n";
+        Value *args[] = {fp_value};
+        value = builder->CreateCall(fix16_from_float, args);
     } else if (!src.is_float() && !dst.is_float()) {
         // Widening integer casts either zero extend or sign extend,
         // depending on the source type. Narrowing integer casts
@@ -1181,6 +1228,13 @@ void CodeGen_LLVM::visit(const Variable *op) {
 void CodeGen_LLVM::visit(const Add *op) {
     if (op->type.is_float()) {
         value = builder->CreateFAdd(codegen(op->a), codegen(op->b));
+    } else if (op->type.is_fix16()) {
+        llvm::Function *fix16_add = module->getFunction("halide_fix16_add");
+        internal_assert(fix16_add) << "Could not find halide_fix16_add function in initial module\n";
+        Value *arg1 = codegen(op->a);
+        Value *arg2 = codegen(op->b);
+        Value *args[] = {arg1, arg2};
+        value = builder->CreateCall(fix16_add, args);
     } else if (op->type.is_int() && op->type.bits() >= 32) {
         // We tell llvm integers don't wrap, so that it generates good
         // code for loop indices.
@@ -1193,6 +1247,13 @@ void CodeGen_LLVM::visit(const Add *op) {
 void CodeGen_LLVM::visit(const Sub *op) {
     if (op->type.is_float()) {
         value = builder->CreateFSub(codegen(op->a), codegen(op->b));
+    } else if (op->type.is_fix16()) {
+        llvm::Function *fix16_sub = module->getFunction("halide_fix16_sub");
+        internal_assert(fix16_sub) << "Could not find halide_fix16_sub function in initial module\n";
+        Value *arg1 = codegen(op->a);
+        Value *arg2 = codegen(op->b);
+        Value *args[] = {arg1, arg2};
+        value = builder->CreateCall(fix16_sub, args);
     } else if (op->type.is_int() && op->type.bits() >= 32) {
         // We tell llvm integers don't wrap, so that it generates good
         // code for loop indices.
@@ -1205,6 +1266,13 @@ void CodeGen_LLVM::visit(const Sub *op) {
 void CodeGen_LLVM::visit(const Mul *op) {
     if (op->type.is_float()) {
         value = builder->CreateFMul(codegen(op->a), codegen(op->b));
+    } else if (op->type.is_fix16()) {
+        llvm::Function *fix16_mul = module->getFunction("halide_fix16_mul");
+        internal_assert(fix16_mul) << "Could not find halide_fix16_mul function in initial module\n";
+        Value *arg1 = codegen(op->a);
+        Value *arg2 = codegen(op->b);
+        Value *args[] = {arg1, arg2};
+        value = builder->CreateCall(fix16_mul, args);
     } else if (op->type.is_int() && op->type.bits() >= 32) {
         // We tell llvm integers don't wrap, so that it generates good
         // code for loop indices.
@@ -1238,6 +1306,13 @@ void CodeGen_LLVM::visit(const Div *op) {
     int shift_amount;
     if (op->type.is_float()) {
         value = builder->CreateFDiv(codegen(op->a), codegen(op->b));
+    } else if (op->type.is_fix16()) {
+        llvm::Function *fix16_div = module->getFunction("halide_fix16_div");
+        internal_assert(fix16_div) << "Could not find halide_fix16_div function in initial module\n";
+        Value *arg1 = codegen(op->a);
+        Value *arg2 = codegen(op->b);
+        Value *args[] = {arg1, arg2};
+        value = builder->CreateCall(fix16_div, args);
     } else if (is_const_power_of_two_integer(op->b, &shift_amount) &&
                (op->type.is_int() || op->type.is_uint())) {
         value = codegen(op->a >> shift_amount);

@@ -30,6 +30,7 @@ protected:
     EXPORT virtual void visit(const IntImm *);
     EXPORT virtual void visit(const UIntImm *);
     EXPORT virtual void visit(const FloatImm *);
+    EXPORT virtual void visit(const Fix16Imm *);
     EXPORT virtual void visit(const StringImm *);
     EXPORT virtual void visit(const Cast *);
     EXPORT virtual void visit(const Variable *);
@@ -96,6 +97,7 @@ protected:
     EXPORT void visit(const IntImm *) override;
     EXPORT void visit(const UIntImm *) override;
     EXPORT void visit(const FloatImm *) override;
+    EXPORT void visit(const Fix16Imm *) override;
     EXPORT void visit(const StringImm *) override;
     EXPORT void visit(const Cast *) override;
     EXPORT void visit(const Variable *) override;

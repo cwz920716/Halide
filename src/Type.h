@@ -2,9 +2,11 @@
 #define HALIDE_TYPE_H
 
 #include <stdint.h>
+#include <cassert>
 #include "runtime/HalideRuntime.h"
 #include "Error.h"
 #include "Util.h"
+#include "Fix16.h"
 #include "Float16.h"
 
 /** \file
@@ -293,6 +295,7 @@ struct Type {
     static const halide_type_code_t Int = halide_type_int;
     static const halide_type_code_t UInt = halide_type_uint;
     static const halide_type_code_t Float = halide_type_float;
+    static const halide_type_code_t Fix16 = halide_type_fix16;
     static const halide_type_code_t Handle = halide_type_handle;
     // @}
 
@@ -368,6 +371,9 @@ struct Type {
     /** Is this type a floating point type (float or double). */
     bool is_float() const {return code() == Float;}
 
+    /** Is this type a fixed point 16.16 type. */
+    bool is_fix16() const {return code() == Fix16;}
+
     /** Is this type a signed integer type? */
     bool is_int() const {return code() == Int;}
 
@@ -380,9 +386,16 @@ struct Type {
     /** Check that the type name of two handles matches. */
     EXPORT bool same_handle_type(const Type &other) const;
 
+    /** Check that one of them is int and fixed point. */
+    EXPORT bool compatible_type_codes(const Type &other) const {
+        // return (is_fix16() && other.is_int()) || (is_int() && other.is_fix16());
+        return false;
+    }
+
     /** Compare two types for equality */
     bool operator==(const Type &other) const {
-        return code() == other.code() && bits() == other.bits() && lanes() == other.lanes() &&
+        return (code() == other.code() || compatible_type_codes(other))
+                 && bits() == other.bits() && lanes() == other.lanes() &&
             (code() != Handle || same_handle_type(other));
     }
 
@@ -446,6 +459,13 @@ inline Type UInt(int bits, int lanes = 1) {
 /** Construct a floating-point type */
 inline Type Float(int bits, int lanes = 1) {
     return Type(Type::Float, bits, lanes);
+}
+
+/** Construct a fixed-point 16.16 type */
+inline Type Fix16(int lanes = 1) {
+    // TODO(wcui): support vector in the future.
+    assert(lanes <= 1);
+    return Type(Type::Fix16, 32, lanes);
 }
 
 /** Construct a boolean type */

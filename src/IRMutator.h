@@ -50,6 +50,7 @@ protected:
     EXPORT virtual void visit(const IntImm *);
     EXPORT virtual void visit(const UIntImm *);
     EXPORT virtual void visit(const FloatImm *);
+    EXPORT virtual void visit(const Fix16Imm *);
     EXPORT virtual void visit(const StringImm *);
     EXPORT virtual void visit(const Cast *);
     EXPORT virtual void visit(const Variable *);
@@ -122,6 +123,7 @@ protected:
     EXPORT virtual Expr visit(const IntImm *);
     EXPORT virtual Expr visit(const UIntImm *);
     EXPORT virtual Expr visit(const FloatImm *);
+    EXPORT virtual Expr visit(const Fix16Imm *);
     EXPORT virtual Expr visit(const StringImm *);
     EXPORT virtual Expr visit(const Cast *);
     EXPORT virtual Expr visit(const Variable *);

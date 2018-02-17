@@ -245,6 +245,15 @@ inline Expr cast(Type t, Expr a) {
     return Internal::Cast::make(t, std::move(a));
 }
 
+/* Cast an expression to fixed point 16.16 type */
+inline Expr fixed_cast(Expr a) {
+    int lanes = 1;
+    if (a.type().is_vector()) {
+        lanes = a.type().lanes();
+    }
+    return cast(Fix16(lanes), std::move(a));
+}
+
 /** Return the sum of two expressions, doing any necessary type
  * coercion using \ref Internal::match_types */
 inline Expr operator+(Expr a, Expr b) {

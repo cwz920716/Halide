@@ -25,6 +25,9 @@ ostream &operator<<(ostream &out, const Type &type) {
     case Type::Float:
         out << "float";
         break;
+    case Type::Fix16:
+        out << "fix16_t";
+        break;
     case Type::Handle:
         if (type.handle_type) {
             out << "(" << type.handle_type->inner_name.name << " *)";
@@ -33,7 +36,7 @@ ostream &operator<<(ostream &out, const Type &type) {
         }
         break;
     }
-    if (!type.is_handle()) {
+    if (!type.is_handle() && !type.is_fix16()) {
         out << type.bits();
     }
     if (type.lanes() > 1) out << 'x' << type.lanes();
@@ -313,6 +316,10 @@ void IRPrinter::visit(const FloatImm *op) {
     }
 }
 
+void IRPrinter::visit(const Fix16Imm *op) {
+    stream << "fix16_from_float(" << float(op->value) << ")";
+}
+
 void IRPrinter::visit(const StringImm *op) {
     stream << '"';
     for (size_t i = 0; i < op->value.size(); i++) {
@@ -347,7 +354,11 @@ void IRPrinter::visit(const StringImm *op) {
 }
 
 void IRPrinter::visit(const Cast *op) {
-    stream << op->type << '(';
+    if (op->type.is_fix16()) {
+        stream << "fix16_from_float(";
+    } else {
+        stream << op->type << '(';
+    }
     print(op->value);
     stream << ')';
 }

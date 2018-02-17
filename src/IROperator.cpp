@@ -291,6 +291,9 @@ Expr make_const_helper(Type t, T val) {
         return UIntImm::make(t, (uint64_t)val);
     } else if (t.is_float()) {
         return FloatImm::make(t, (double)val);
+    } else if (t.is_fix16()) {
+        Fix16_t v((float) val);
+        return Fix16Imm::make(t, v);
     } else {
         internal_error << "Can't make a constant of type " << t << "\n";
         return Expr();
@@ -427,7 +430,12 @@ void match_types(Expr &a, Expr &b) {
     // If type widening has made the types match no additional casts are needed
     if (ta == tb) return;
 
-    if (!ta.is_float() && tb.is_float()) {
+    if (!ta.is_fix16() && tb.is_fix16()) {
+        // float(a) * fix16.16(b) -> fix16.16(b)
+        a = cast(tb, std::move(a));
+    } else if (ta.is_fix16() && !tb.is_float()) {
+        b = cast(ta, std::move(b));
+    } else if (!ta.is_float() && tb.is_float()) {
         // int(a) * float(b) -> float(b)
         // uint(a) * float(b) -> float(b)
         a = cast(tb, std::move(a));
