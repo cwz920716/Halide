@@ -1150,10 +1150,46 @@ void CodeGen_LLVM::visit(const Cast *op) {
 
     llvm::Type *llvm_dst = llvm_type_of(dst);
 
+    // std::cout << "cast from " << src << " to " << dst << "\n";
     if (dst.is_handle() && src.is_handle()) {
         value = builder->CreateBitCast(value, llvm_dst);
     } else if (dst.is_handle() || src.is_handle()) {
         internal_error << "Can't cast from " << src << " to " << dst << "\n";
+    } else if (src.is_fix16() && !dst.is_fix16()) {
+        llvm::Function *fix16_to_float = module->getFunction("halide_fix16_to_float");
+        internal_assert(fix16_to_float) << "Could not find halide_fix16_to_float function in initial module\n";
+        Value *args[] = {value};
+        Value *fp_value = builder->CreateCall(fix16_to_float, args);
+        if (dst.is_int()) {
+            value = builder->CreateFPToSI(fp_value, llvm_dst);
+        } else if (dst.is_uint()) {
+            if (dst.bits() < 8) {
+                value = builder->CreateFPToUI(fp_value, llvm_type_of(dst.with_bits(8)));
+                value = builder->CreateIntCast(fp_value, llvm_dst, false);
+            } else {
+                value = builder->CreateFPToUI(fp_value, llvm_dst);
+            }
+        } else {
+            internal_assert(dst.is_float());
+            value = builder->CreateFPCast(fp_value, llvm_dst);
+        }
+    } else if (!src.is_fix16() && dst.is_fix16()) {
+        Type fp32 = Float(32);
+        llvm::Type *fp_type = llvm_type_of(fp32);
+        Value *fp_value = nullptr;
+        if (src.is_int()) {
+            fp_value = builder->CreateSIToFP(value, fp_type);
+        } else if (src.is_uint()) {
+            fp_value = builder->CreateUIToFP(value, fp_type);
+        } else {
+            internal_assert(src.is_float());
+            // Float widening or narrowing
+            fp_value = builder->CreateFPCast(value, fp_type);
+        }
+        llvm::Function *fix16_from_float = module->getFunction("halide_fix16_from_float");
+        internal_assert(fix16_from_float) << "Could not find halide_fix16_from_float function in initial module\n";
+        Value *args[] = {fp_value};
+        value = builder->CreateCall(fix16_from_float, args);
     } else if (!src.is_float() && !dst.is_float()) {
         // Widening integer casts either zero extend or sign extend,
         // depending on the source type. Narrowing integer casts
