@@ -82,6 +82,7 @@ extern "C" __attribute__((used)) void *halide_runtime_api_functions[] = {
     (void *)&halide_error_unaligned_host_ptr,
     (void *)&halide_float16_bits_to_double,
     (void *)&halide_float16_bits_to_float,
+    (void *)&halide_fix16_from_float,
     (void *)&halide_free,
     (void *)&halide_get_cpu_features,
     (void *)&halide_get_gpu_device,

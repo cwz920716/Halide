@@ -1129,8 +1129,11 @@ void CodeGen_LLVM::visit(const FloatImm *op) {
 
 // TODO(wcui): place holder for fix16.16
 void CodeGen_LLVM::visit(const Fix16Imm *op) {
-    llvm::Function *fix16_from_float = module->getFunction("fix16_from_float");
-    Value *imm = ConstantInt::getSigned(llvm_type_of(op->type), op->value.to_bits());
+    llvm::Function *fix16_from_float = module->getFunction("halide_fix16_from_float");
+    internal_assert(fix16_from_float) << "Could not find halide_fix16_from_float function in initial module\n";
+
+    Type fp32 = Float(32);
+    Value *imm = ConstantFP::get(llvm_type_of(fp32), float(op->value));
     Value *args[] = {imm};
     value = builder->CreateCall(fix16_from_float, args);
 }
