@@ -1470,6 +1470,7 @@ test_apps: $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLUDE_D
 	  echo "Building out-of-tree, so making local copy of apps"; \
 	  cp -r $(ROOT_DIR)/apps/bilateral_grid \
 	        $(ROOT_DIR)/apps/conv_layer \
+	        $(ROOT_DIR)/apps/dnn \
 	        $(ROOT_DIR)/apps/lens_blur \
 	        $(ROOT_DIR)/apps/local_laplacian \
 	        $(ROOT_DIR)/apps/nl_means \
@@ -1514,6 +1515,7 @@ test_apps: $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLUDE_D
 	if [ -f /usr/include/cblas.h ]; then \
 	  make -C apps/linear_algebra clean HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) ; \
 	  make -C apps/linear_algebra test HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) ; \
+	  make -C apps/dnn test HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) ; \
 	fi
 	make -C apps/linear_blur clean HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) ; \
 	make -C apps/linear_blur test HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) ; \
