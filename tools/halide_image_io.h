@@ -1122,6 +1122,10 @@ bool save_mat(ImageType &im, const std::string &filename) {
 
     uint32_t class_code = 0, type_code = 0;
     switch (im.raw_buffer()->type.code) {
+    case halide_type_fix16:
+        class_code = mxINT32_CLASS;
+        type_code = miINT32;
+        break;
     case halide_type_int:
         switch (im.raw_buffer()->type.bits) {
         case 8:
