@@ -71,8 +71,9 @@ BENCHMARKS = \
 all: $(BENCHMARKS)
 	make run_benchmarks
 
-test: $(BIN)/test_halide_blas
+test: $(BIN)/test_halide_blas $(BIN)/test_inner_product
 	$(BIN)/test_halide_blas
+	$(BIN)/test_inner_product
 
 clean:
 	rm -rf bin
@@ -88,6 +89,10 @@ $(LIBHALIDE_BLAS): $(KERNEL_OBJECTS) $(BUILD)/halide_blas.o
 	$(AR) q $@ $(filter-out %.a,$^)
 
 $(BIN)/test_halide_blas: tests/test_halide_blas.cpp $(LIBHALIDE_BLAS)
+	$(CXX) $(CXXFLAGS) -Wno-unused-variable -o $(@) -I../../include/ -I../support -Isrc -I$(BUILD) \
+	$(CBLAS_FLAGS) $^ $(CBLAS_LIBS) $(LDFLAGS)
+
+$(BIN)/test_inner_product: tests/test_inner_product.cpp $(LIBHALIDE_BLAS)
 	$(CXX) $(CXXFLAGS) -Wno-unused-variable -o $(@) -I../../include/ -I../support -Isrc -I$(BUILD) \
 	$(CBLAS_FLAGS) $^ $(CBLAS_LIBS) $(LDFLAGS)
 
