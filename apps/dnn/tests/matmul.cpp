@@ -18,9 +18,10 @@ int main(int argc, char **argv) {
     Var i("i"), j("j"), k("k");
     Var ji("ji"), jo("jo"), ko("ko"), ki("ki");
     Var ii("ii"), io("io"), iio("iio"), iii("iii"), jio("jio"), jii("jii"), t("t");
+    RVar rv_i("rv_i"), rv_o("rv_o");
 
-    int M = 256, N = 64, K = 25;
-    int nc = 32, kc = 5, mc = 8, mr = 4, nr = 4;
+    int M = 256, N = 64, K = 128;
+    int nc = 32, kc = 16, mc = 8, mr = 4, nr = 4;
 
     // i-th row, j-th column
     A(j, i) = cast<float>(i + j);
@@ -34,21 +35,22 @@ int main(int argc, char **argv) {
     Ap(ji, jo, ii, io) = A(jo*kc+ji, io*mc+ii);
     Atmp(j, i) = Ap(j % kc, j / kc, i % mc, i / mc);
 
-    RDom rv(0, kc, 0, K / kc);
+    RDom rv(0, K);
     Func prod("prod");
-    prod(ki, ko, j, i) = cast<float>(Atmp(ko*kc+ki, i) * Btmp(j, ko*kc+ki));
-    C(j, i) += prod(rv.x, rv.y, j, i);
+    prod(k, j, i) = cast<float>(Atmp(k, i) * Btmp(j, k));
+    C(j, i) += prod(rv, j, i);
 
     // Schedule
     C.update(0).split(j, jo, ji, nc, TailStrategy::GuardWithIf)
+               .split(rv, rv_o, rv_i, kc, TailStrategy::GuardWithIf)
                .split(i, io, ii, mc, TailStrategy::GuardWithIf)
                .split(ji, jio, jii, mr, TailStrategy::GuardWithIf)
                .split(ii, iio, iii, nr, TailStrategy::GuardWithIf)
-               .reorder(jii, iii, rv.x, iio, jio, io, rv.y, jo)
+               .reorder(jii, iii, rv_i, iio, jio, io, rv_o, jo)
                .unroll(iii, 2)
                .vectorize(jii)
                .rename(jo, t).parallel(t);
-    Btmp.compute_at(C, rv.y);
+    Btmp.compute_at(C, rv_o);
     Atmp.compute_at(C, io);
 
     // That line compiled and ran the pipeline. Try running this
