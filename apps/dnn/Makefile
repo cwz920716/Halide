@@ -71,8 +71,7 @@ BENCHMARKS = \
 all: $(BENCHMARKS)
 	make run_benchmarks
 
-test: $(BIN)/test_halide_blas $(BIN)/test_inner_product
-	$(BIN)/test_halide_blas
+test: $(BIN)/test_inner_product
 	$(BIN)/test_inner_product
 
 clean:
@@ -92,7 +91,7 @@ $(BIN)/test_halide_blas: tests/test_halide_blas.cpp $(LIBHALIDE_BLAS)
 	$(CXX) $(CXXFLAGS) -Wno-unused-variable -o $(@) -I../../include/ -I../support -Isrc -I$(BUILD) \
 	$(CBLAS_FLAGS) $^ $(CBLAS_LIBS) $(LDFLAGS)
 
-$(BIN)/test_inner_product: tests/test_inner_product.cpp $(LIBHALIDE_BLAS)
+$(BIN)/test_inner_product: tests/test_inner_product.cpp $(LIBHALIDE_BLAS) $(BUILD)/inner_product_layer.a
 	$(CXX) $(CXXFLAGS) -Wno-unused-variable -o $(@) -I../../include/ -I../support -Isrc -I$(BUILD) \
 	$(CBLAS_FLAGS) $^ $(CBLAS_LIBS) $(LDFLAGS)
 
@@ -208,6 +207,9 @@ $(BUILD)/%.generator: src/%_generators.cpp $(GENERATOR_DEPS)
 # This can use any of the generators; pick an arbitrary one
 $(BUILD)/halide_runtime.o: $(BUILD)/blas_l1.generator
 	$< -o $(BUILD) -e o -r halide_runtime target=$(HL_TARGET)
+
+$(BUILD)/inner_product_layer.a: $(BUILD)/inner_product_layer.generator
+	$^ -g inner_product_layer -o $(BUILD) -f inner_product_layer target=$(HL_TARGET_NR)
 
 $(BUILD)/halide_scopy_impl.o $(BUILD)/halide_scopy_impl.h: $(BUILD)/blas_l1.generator
 	$< -g saxpy -f halide_scopy_impl -o $(BUILD) -e $(EMIT_OPTIONS) \

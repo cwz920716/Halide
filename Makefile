@@ -1525,6 +1525,20 @@ test_apps: $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLUDE_D
 	make -C apps/resize clean  HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR)
 	make -C apps/resize all  HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR)
 
+.PHONY: test_dnn
+test_dnn: $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLUDE_DIR)/Halide.h $(RUNTIME_EXPORTED_INCLUDES)
+	mkdir -p apps
+	# Make a local copy of the apps if we're building out-of-tree,
+	# because the app Makefiles are written to build in-tree
+	if [ "$(ROOT_DIR)" != "$(CURDIR)" ]; then \
+	  echo "Building out-of-tree, so making local copy of apps/dnn"; \
+	  cp -r $(ROOT_DIR)/apps/dnn \
+                apps; \
+	  cp -r $(ROOT_DIR)/tools .; \
+	fi
+	make -C apps/dnn clean HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR)
+	make -C apps/dnn test HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR)
+
 # Bazel depends on the distrib archive being built
 .PHONY: test_bazel
 test_bazel: $(DISTRIB_DIR)/halide.tgz
